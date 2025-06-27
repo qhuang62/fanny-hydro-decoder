@@ -1,2 +1,3 @@
-# aurora-lite-decoder
-Extension of the Aurora weather foundation model using lightweight decoders for efficient finetuning
+# Finetuning a Weather Foundation Model with Lightweight Decoders for Unseen Physical Processes
+
+This repository is under construction and will be updated in the upcoming days. Thank you for your patience.
