@@ -5,7 +5,7 @@ This repository supports the [preprint](http://arxiv.org/abs/2506.19088) "Finetu
 ![Illustration Aurora and hydrology decoders](aurora_decoders.png)
 
 ## Code requirements
-You need to install the [aurora](https://microsoft.github.io/aurora/usage.html) package. There is no additional requirements for this repository. 
+You need to install the [aurora](https://microsoft.github.io/aurora/usage.html) package. There is no additional requirements for this repository. This repository builds on aurora code from Dec 22, 2024. the new functionalities are added in [aurora_lite.py](aurora/model/aurora_lite.py) and [decoder_lite.py](aurora/model/decoder_lite.py).
 
 The notebook [Inference_decoders.ipynb ](Inference_decoders.ipynb) shows how to make predictions with the pretrained decoders.
 
