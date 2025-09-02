@@ -4,10 +4,17 @@ This repository supports the [preprint](http://arxiv.org/abs/2506.19088) "Finetu
 
 ![Illustration Aurora and hydrology decoders](aurora_decoders.png)
 
-## Code requirements
+## Get started
 You need to install the [aurora](https://microsoft.github.io/aurora/usage.html) package. There is no additional requirements for this repository. This repository builds on aurora code from Dec 22, 2024. the new functionalities are added in [aurora_lite.py](aurora/model/aurora_lite.py) and [decoder_lite.py](aurora/model/decoder_lite.py).
 
 The notebook [Inference_decoders.ipynb ](Inference_decoders.ipynb) shows how to make predictions with the pretrained decoders.
+
+The reference datasets to train the decoders are:
+- total precipitation from [MSWEP](https://www.gloh2o.org/mswep/), 6-hour accumulated with log-transformed
+- potential evaporation from [ERA5](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview), 6-hour accumulated
+- runoff from [ERA5](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview), instantaneous
+- soil water content from [ERA5](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview), the weighted sum of "volumetric soil water layer" in the first top three layers (i.e., down to 1 meter), instantaneous
+The training dataset comprises 17 000 samples between May 2002 and June 2014, while the validation dataset comprises 1700 samples between July 2014 and December 2015, and the test dataset contains 1460 samples between January 2020 and December 2020.
 
 
 ## Acknowledgements
