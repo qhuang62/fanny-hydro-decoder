@@ -22,7 +22,12 @@ from aurora.model.fourier import lead_time_expansion
 from aurora.model.lora import LoRAMode, LoRARollout
 from aurora.model.util import init_weights, maybe_adjust_windows
 
-from flash_attn import flash_attn_qkvpacked_func
+try:
+    from flash_attn import flash_attn_qkvpacked_func
+    HAS_FLASH_ATTN = True
+except ImportError:
+    HAS_FLASH_ATTN = False
+    flash_attn_qkvpacked_func = None
 
 __all__ = ["Swin3DTransformerBackbone"]
 
@@ -163,14 +168,16 @@ class WindowAttention(nn.Module):
             x = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=attn_dropout)
             x = rearrange(x, "B nW H N D -> (B nW) H N D")
         else:
-            ### use flash-attn ###
-            qkv = rearrange(qkv, "qkv B H N D -> B N qkv H D")
-            x = flash_attn_qkvpacked_func(qkv, dropout_p=attn_dropout) # qkv: (batch_size, seqlen, 3, nheads, headdim)
-            x = rearrange(x, "B N H D -> B H N D")
-            ### use flash-attn ###
-            ### use vanilla attn ###
-            # x = F.scaled_dot_product_attention(q, k, v, dropout_p=attn_dropout)
-            ### use vanilla attn ###
+            if HAS_FLASH_ATTN:
+                ### use flash-attn ###
+                qkv = rearrange(qkv, "qkv B H N D -> B N qkv H D")
+                x = flash_attn_qkvpacked_func(qkv, dropout_p=attn_dropout) # qkv: (batch_size, seqlen, 3, nheads, headdim)
+                x = rearrange(x, "B N H D -> B H N D")
+                ### use flash-attn ###
+            else:
+                ### use vanilla attn ###
+                x = F.scaled_dot_product_attention(q, k, v, dropout_p=attn_dropout)
+                ### use vanilla attn ###
 
         x = rearrange(x, "B H N D -> B N (H D)")
         x = self.proj(x) + self.lora_proj(x, rollout_step)
