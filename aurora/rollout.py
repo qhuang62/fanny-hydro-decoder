@@ -5,17 +5,17 @@ from typing import Generator
 
 import torch
 
-from DecodersAurora.aurora.batch import Batch
-from DecodersAurora.aurora.model.aurora import Aurora
+from aurora.batch import Batch
+from aurora.model.aurora_lite import AuroraLite
 
 __all__ = ["rollout"]
 
 
-def rollout(model: Aurora, batch: Batch, steps: int) -> Generator[Batch, None, None]:
+def rollout(model: AuroraLite, batch: Batch, steps: int) -> Generator[Batch, None, None]:
     """Perform a roll-out to make long-term predictions.
 
     Args:
-        model (:class:`aurora.model.aurora.Aurora`): The model to roll out.
+        model (:class:`aurora.model.aurora_lite.AuroraLite`): The model to roll out.
         batch (:class:`aurora.batch.Batch`): The batch to start the roll-out from.
         steps (int): The number of roll-out steps.
 
@@ -30,7 +30,7 @@ def rollout(model: Aurora, batch: Batch, steps: int) -> Generator[Batch, None, N
     batch = batch.to(p.device)
 
     for _ in range(steps):
-        pred = model.forward(batch)
+        pred, _ = model.forward(batch)  # AuroraLite returns (pred, latent_decoder)
 
         yield pred
 
