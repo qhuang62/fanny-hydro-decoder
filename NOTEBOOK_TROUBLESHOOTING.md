@@ -145,3 +145,40 @@ print(f"Project dir in path: {project_dir in sys.path}")
 ```
 
 The data files will persist and won't need to be re-downloaded due to the notebook's existence checks.
+
+### 5. Rollout Import Error
+
+**Problem**: `ModuleNotFoundError: No module named 'DecodersAurora'` when importing rollout function
+
+**Root Cause**: The `aurora/rollout.py` file contained incorrect import paths referencing a non-existent `DecodersAurora` package and wrong class names.
+
+**Solution Applied**:
+```python
+# Fixed imports in aurora/rollout.py
+# Before:
+from DecodersAurora.aurora.batch import Batch
+from DecodersAurora.aurora.model.aurora import Aurora
+
+# After:
+from aurora.batch import Batch
+from aurora.model.aurora_lite import AuroraLite
+
+# Fixed function signature and forward call:
+def rollout(model: AuroraLite, batch: Batch, steps: int) -> Generator[Batch, None, None]:
+    # ...
+    for _ in range(steps):
+        pred, _ = model.forward(batch)  # AuroraLite returns (pred, latent_decoder)
+        yield pred
+```
+
+**Usage**: The rollout function enables multi-step forecasting:
+```python
+from aurora.rollout import rollout
+
+# Perform 4-step rollout (24 hours of predictions)
+rollout_steps = 4
+with torch.inference_mode():
+    for i, pred_batch in enumerate(rollout(modelAurora, batch, rollout_steps)):
+        print(f"Step {i+1}: Predicting for {pred_batch.metadata.time[0]}")
+        # Use pred_batch for decoder predictions
+```

@@ -254,3 +254,106 @@ This design balances computational efficiency with spatial detail preservation.
 - **Memory Usage**: Modest increase due to latent storage
 
 The approach demonstrates how foundation model embeddings can be efficiently leveraged for new tasks without extensive retraining.
+
+## Multi-Step Forecasting with Rollout (`aurora/rollout.py`)
+
+### Rollout Functionality
+
+The rollout capability enables long-term forecasting by performing iterative predictions where each forecast step uses the previous prediction as input. This creates a temporal chain of predictions extending beyond the model's native single-step (6-hour) forecast horizon.
+
+### Implementation
+
+```python
+def rollout(model: AuroraLite, batch: Batch, steps: int) -> Generator[Batch, None, None]:
+    """Perform a roll-out to make long-term predictions.
+    
+    Args:
+        model: The AuroraLite model to roll out
+        batch: Initial batch to start rollout from  
+        steps: Number of rollout steps (each step = 6 hours)
+        
+    Yields:
+        Batch: Prediction after every step
+    """
+```
+
+### Temporal Continuity Strategy
+
+The rollout maintains temporal consistency through a sliding window approach:
+
+1. **Initial State**: Start with 2-timestep input (t-6h, t0) 
+2. **Forward Prediction**: Generate prediction for next timestep (t+6h)
+3. **History Update**: Create new batch with:
+   - Previous timestep: t0 → t+6h (from step 2) 
+   - Current timestep: t+6h → prediction (from step 2)
+4. **Iterate**: Repeat process for desired number of steps
+
+```python
+# Key implementation detail - history concatenation
+batch = dataclasses.replace(
+    pred,
+    surf_vars={
+        k: torch.cat([batch.surf_vars[k][:, 1:], v], dim=1)
+        for k, v in pred.surf_vars.items()
+    },
+    atmos_vars={
+        k: torch.cat([batch.atmos_vars[k][:, 1:], v], dim=1) 
+        for k, v in pred.atmos_vars.items()
+    },
+)
+```
+
+### AuroraLite Compatibility
+
+The rollout function was updated to work with `AuroraLite` models that return both predictions and latent representations:
+
+```python
+# Handle AuroraLite's dual return format
+pred, _ = model.forward(batch)  # Extract prediction, ignore latent
+
+# Standard rollout processing continues with pred
+yield pred
+```
+
+### Rollout Applications
+
+**Hydrological Forecasting**: 
+- Extend from 6-hour predictions to multi-day forecasts
+- Track temporal evolution of precipitation, soil moisture, runoff
+- Analyze persistent weather patterns and their hydrological impacts
+
+**Example Usage**:
+```python
+from aurora.rollout import rollout
+
+# 4-step rollout = 24 hours of predictions
+rollout_steps = 4
+rollout_predictions = []
+
+with torch.inference_mode():
+    for i, pred_batch in enumerate(rollout(modelAurora, batch, rollout_steps)):
+        print(f"Step {i+1}: {pred_batch.metadata.time[0]}")
+        
+        # Generate decoder predictions for this timestep
+        _, lat_dec = modelAurora.forward(pred_batch)
+        decoder_preds = modelDecoder.forward(lat_dec, pred_batch.metadata.lat, pred_batch.metadata.lon)
+        
+        rollout_predictions.append(decoder_preds)
+```
+
+### Temporal Error Propagation
+
+**Error Accumulation**: Rollout predictions accumulate errors over time as each step uses imperfect previous predictions as input.
+
+**Mitigation Strategies**:
+- **Limited Horizon**: Most accurate within first few steps (6-24 hours)
+- **Ensemble Methods**: Multiple rollouts with slight perturbations 
+- **Recalibration**: Periodic reinitialization with observational data
+
+### Performance Considerations
+
+- **Memory Usage**: Each rollout step requires full model forward pass
+- **Compute Scaling**: O(steps) complexity for total rollout time
+- **Parallel Processing**: Individual steps cannot be parallelized due to temporal dependency
+
+The rollout functionality transforms the single-step Aurora+decoders system into a dynamic forecasting tool capable of extended temporal predictions for hydrological applications.
